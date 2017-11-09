@@ -90,6 +90,10 @@ simulated_historical_forecasts <- function(model, horizon, units, k,
         columns <- c(columns, 'floor')
       }
     }
+    if (length(m$extra_regressors) > 0) {
+      regressor_names <- names(m$extra_regressors)
+      columns <- c(columns, regressor_names)
+    }
     future <- df[columns]
     yhat <- stats::predict(m, future)
     # Merge yhat, y, and cutoff.
