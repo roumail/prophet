@@ -72,6 +72,8 @@ simulated_historical_forecasts <- function(model, horizon, units, k,
   } else {
     period <- as.difftime(period, units = units)
   }
+  # regressor names
+  regressor_names <- names(m$extra_regressors)
   cutoffs <- generate_cutoffs(df, horizon, k, period)
   predicts <- data.frame()
   for (i in 1:length(cutoffs)) {
@@ -80,6 +82,28 @@ simulated_historical_forecasts <- function(model, horizon, units, k,
     m <- prophet_copy(model, cutoff)
     # Train model
     history.c <- dplyr::filter(df, ds <= cutoff)
+    # check that regressor we added is not entirely constant
+    
+    # number of unique values for regressors in history.c
+    num_unique_by_regressor <- sapply(regressor_names, function(x) length(unique(history.c[[x]])))
+
+    # which regressors should we remove
+    regressors_to_remove <- names(which(num_unique_by_regressor < 2))
+                                      
+    # remove the regressors from model
+    for (name in regressors_to_remove){
+       m$extra_regressors[[name]] <- NULL
+    }
+    
+    # remove attributes for consistency
+                                      
+    if (!is.null(attr(m$extra_regressors, which = 'names'))){
+      attr(m$extra_regressors, which = 'names') <- NULL
+    }
+    # remove attributes from history.c
+    history.c <- dplyr::select(history.c, -one_of(regressors_to_remove))
+    
+    # fit model
     m <- fit.prophet(m, history.c)
     # Calculate yhat
     df.predict <- dplyr::filter(df, ds > cutoff, ds <= cutoff + horizon)
@@ -90,10 +114,8 @@ simulated_historical_forecasts <- function(model, horizon, units, k,
         columns <- c(columns, 'floor')
       }
     }
-    if (length(m$extra_regressors) > 0) {
-      regressor_names <- names(m$extra_regressors)
+    if (length(regressor_names) > 0) 
       columns <- c(columns, regressor_names)
-    }
     future <- df[columns]
     yhat <- stats::predict(m, future)
     # Merge yhat, y, and cutoff.
