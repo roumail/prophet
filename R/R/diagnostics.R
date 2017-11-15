@@ -73,7 +73,7 @@ simulated_historical_forecasts <- function(model, horizon, units, k,
     period <- as.difftime(period, units = units)
   }
   # regressor names
-  regressor_names <- names(m$extra_regressors)
+  regressor_names <- names(model$extra_regressors)
   cutoffs <- generate_cutoffs(df, horizon, k, period)
   predicts <- data.frame()
   for (i in 1:length(cutoffs)) {
